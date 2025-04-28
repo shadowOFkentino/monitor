@@ -1,0 +1,53 @@
+-- SQLite Schema for Miner History Database
+
+-- Main table to store periodic readings of miner status
+CREATE TABLE miner_readings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER NOT NULL,           -- Unix timestamp of reading
+    worker_name TEXT NOT NULL,            -- Name of the worker/miner
+    hashrate REAL NOT NULL,               -- Current hashrate in H/s
+    hashrate_1h REAL,                     -- 1-hour average hashrate
+    hashrate_24h REAL,                    -- 24-hour average hashrate
+    reject_rate REAL,                     -- Rejection rate
+    status TEXT NOT NULL,                 -- Status: active, dead, failing, unstable
+    coin_type TEXT NOT NULL,              -- BTC or KAS
+    rack TEXT                             -- Rack identifier (CH, B, C, etc.)
+);
+
+-- Create indices for faster querying
+CREATE INDEX idx_readings_timestamp ON miner_readings(timestamp);
+CREATE INDEX idx_readings_worker ON miner_readings(worker_name);
+CREATE INDEX idx_readings_status ON miner_readings(status);
+CREATE INDEX idx_readings_rack ON miner_readings(rack);
+
+-- Summary table for daily statistics by worker
+CREATE TABLE daily_worker_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,                   -- Date in YYYY-MM-DD format
+    worker_name TEXT NOT NULL,            -- Name of the worker/miner
+    avg_hashrate REAL NOT NULL,           -- Average hashrate for the day
+    max_hashrate REAL NOT NULL,           -- Maximum hashrate observed
+    min_hashrate REAL NOT NULL,           -- Minimum hashrate observed
+    uptime_percentage REAL NOT NULL,      -- Percentage of time the miner was active
+    total_downtime_minutes INTEGER,       -- Total downtime in minutes
+    avg_reject_rate REAL,                 -- Average rejection rate
+    coin_type TEXT NOT NULL               -- BTC or KAS
+);
+
+-- Create unique constraint and index for daily stats
+CREATE UNIQUE INDEX idx_daily_stats_unique ON daily_worker_stats(date, worker_name, coin_type);
+
+-- Summary table for rack performance
+CREATE TABLE rack_performance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,                   -- Date in YYYY-MM-DD format
+    rack_name TEXT NOT NULL,              -- Rack identifier
+    avg_hashrate REAL NOT NULL,           -- Average hashrate for the rack
+    worker_count INTEGER NOT NULL,        -- Number of workers in the rack
+    active_worker_count INTEGER NOT NULL, -- Number of active workers
+    efficiency_percentage REAL NOT NULL,  -- (active_workers/total_workers) * 100
+    coin_type TEXT NOT NULL               -- BTC or KAS
+);
+
+-- Create unique constraint for rack stats
+CREATE UNIQUE INDEX idx_rack_stats_unique ON rack_performance(date, rack_name, coin_type);
