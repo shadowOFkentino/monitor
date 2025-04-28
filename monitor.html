@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Miner Status & History</title>
+    <style>
+        /* Keep your existing styles */
+        :root {
+            --background-color: #f0f0f0;
+            --text-color: #333;
+            --card-background: #ffffff;
+            --dock-background: #dddddd;
+            --active-color: #4CAF50;
+            --failing-color: #FFC107;
+            --dead-color: #F44336;
+            --missing-color: #999;
+            --progress-bar-active: #4CAF50;
+            --progress-bar-dead: #F44336;
+            --intro-bar-background: #ffffff;
+            --unstable-color: #9C27B0;
+            --tab-active-bg: #2196F3;
+            --tab-active-color: #fff;
+            --chart-grid-color: #ddd;
+            --chart-line-color: #2196F3;
+            --chart-accent-color: #FF5722;
+        }
+
+        [data-theme="dark"] {
+            --background-color: #1e1e1e;
+            --text-color: #ffffff;
+            --card-background: #2c2c2c;
+            --dock-background: #3c3c3c;
+            --active-color: #388E3C;
+            --failing-color: #FFA000;
+            --dead-color: #D32F2F;
+            --missing-color: #666;
+            --progress-bar-active: #388E3C;
+            --progress-bar-dead: #D32F2F;
+            --intro-bar-background: #2c2c2c;
+            --unstable-color: #7B1FA2;
+            --tab-active-bg: #1976D2;
+            --tab-active-color: #fff;
+            --chart-grid-color: #444;
+            --chart-line-color: #29B6F6;
+            --chart-accent-color: #FF7043;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        h1, h2, h3 {
+            color: var(--text-color);
+        }
+        h1 {
+            text-align: center;
+        }
+
+        /* Add new tab styles */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: var(--dock-background);
+            border: none;
+            margin: 0 5px;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background-color: var(--tab-active-bg);
+            color: var(--tab-active-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chart container styles */
+        .chart-container {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .time-range-selector {
+            display: flex;
+            gap: 10px;
+        }
+        .time-range-selector button {
+            padding: 5px 10px;
+            background-color: var(--dock-background);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .time-range-selector button.active {
+            background-color: var(--tab-active-bg);
+            color: var(--tab-active-color);
+        }
+        .chart-wrapper {
+            height: 300px;
+            position: relative;
+        }
+
+        /* Tables for statistics */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .stats-table th, .stats-table td {
+            border: 1px solid var(--chart-grid-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .stats-table th {
+            background-color: var(--dock-background);
+        }
+        .stats-table tr:nth-child(even) {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .stats-table tr:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        
+        /* Filter controls */
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .filter-group select, .filter-group input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .apply-filters {
+            align-self: flex-end;
+            padding: 8px 16px;
+            background-color: var(--tab-active-bg);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* Responsive design for new elements */
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            .tab {
+                width: 100%;
+                margin-bottom: 5px;
+                border-radius: 5px;
+            }
+            .chart-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .time-range-selector {
+                margin-top: 10px;
+            }
+            .filters {
+                flex-direction: column;
+            }
+        }
+
+        /* Keep your existing responsive styles as well */
+        /* ... */
+    </style>
+    <!-- Add Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body data-theme="light">
+
+<h1>Miner Status & History</h1>
+
+<!-- Theme Switch Button -->
+<button class="theme-switch" onclick="toggleTheme()" title="Toggle Light/Dark Theme">
+    <img id="theme-icon" src="https://img.icons8.com/ios-filled/50/000000/sun.png" alt="Theme Icon">
+    <span id="theme-text">Light Theme</span>
+</button>
+
+<!-- Tabs Navigation -->
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('real-time')">Real-Time Status</button>
+    <button class="tab" onclick="switchTab('history')">Historical Data</button>
+    <button class="tab" onclick="switchTab('stats')">Statistics</button>
+</div>
+
+<!-- Real-Time Status Tab (Your Existing Content) -->
+<div id="real-time" class="tab-content active">
+    <!-- Coin Toggle Buttons -->
+    <div class="coin-toggle">
+        <button id="btc-toggle" class="active" onclick="switchCoin('btc')">Bitcoin (BTC)</button>
+        <button id="kas-toggle" onclick="switchCoin('kas')">Kaspa (KAS)</button>
+    </div>
+
+    <!-- Intro Bar with Miner Statistics -->
+    <div class="intro-bar">
+        <div class="stats">
+            <div id="current-coin">Current: Bitcoin (BTC)</div>
+            <div id="working-miners">Working Miners: 0</div>
+            <div id="nonworking-miners">Nonworking Miners: 0</div>
+            <div id="total-hashrate">Total Hashrate: 0 TH/s</div>
+        </div>
+        <!-- Green/Red Progress Bar -->
+        <div class="progress-bar">
+            <div class="active-progress"></div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button class="refresh-btn" onclick="fetchMinerData()">Refresh Data</button>
+
+    <!-- Rack Containers -->
+    <div id="rack-container">
+        <!-- Rack containers will be rendered here -->
+    </div>
+
+    <!-- Dead Miners Section -->
+    <div id="dead-miners-container">
+        <!-- Dead miners will be rendered here -->
+    </div>
+</div>
+
+<!-- Historical Data Tab -->
+<div id="history" class="tab-content">
+    <h2>Historical Hashrate Data</h2>
+    
+    <!-- Filters for historical data -->
+    <div class="filters">
+        <div class="filter-group">
+            <label for="history-coin">Coin:</label>
+            <select id="history-coin">
+                <option value="btc">Bitcoin (BTC)</option>
+                <option value="kas">Kaspa (KAS)</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="history-miner">Miner:</label>
+            <select id="history-miner">
+                <option value="all">All Miners</option>
+                <!-- Will be populated dynamically -->
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="history-rack">Rack:</label>
+            <select id="history-rack">
+                <option value="all">All Racks</option>
+                <option value="CH">CH</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="F">F</option>
+                <option value="K_01">K_01</option>
+                <option value="K_02">K_02</option>
+                <option value="K_03">K_03</option>
+                <option value="C001">C001</option>
+                <option value="C002">C002</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="date-range">Date Range:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="date" id="start-date">
+                <span>to</span>
+                <input type="date" id="end-date">
+            </div>
+        </div>
+        <button class="apply-filters" onclick="loadHistoricalData()">Apply Filters</button>
+    </div>
+    
+    <!-- Hashrate Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>Hashrate Over Time</h3>
+            <div class="time-range-selector">
+                <button class="active" onclick="setTimeRange('day')">Day</button>
+                <button onclick="setTimeRange('week')">Week</button>
+                <button onclick="setTimeRange('month')">Month</button>
+                <button onclick="setTimeRange('custom')">Custom</button>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="hashrate-chart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Uptime Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>Uptime Percentage</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="uptime-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Tab -->
+<div id="stats" class="tab-content">
+    <h2>Mining Statistics</h2>
+    
+    <!-- Filters for statistics -->
+    <div class="filters">
+        <div class="filter-group">
+            <label for="stats-coin">Coin:</label>
+            <select id="stats-coin">
+                <option value="btc">Bitcoin (BTC)</option>
+                <option value="kas">Kaspa (KAS)</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="stats-period">Time Period:</label>
+            <select id="stats-period">
+                <option value="day">Last 24 Hours</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month" selected>Last 30 Days</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="stats-type">View:</label>
+            <select id="stats-type">
+                <option value="miners">By Miner</option>
+                <option value="racks">By Rack</option>
+            </select>
+        </div>
+        <button class="apply-filters" onclick="loadStatistics()">Apply Filters</button>
+    </div>
+    
+    <!-- Top Performers Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>Top Performers</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="top-performers-chart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Statistics Table -->
+    <div class="chart-container">
+        <h3>Detailed Statistics</h3>
+        <div id="stats-table-container">
+            <table class="stats-table" id="stats-table">
+                <thead>
+                    <tr>
+                        <th>Miner</th>
+                        <th>Avg Hashrate</th>
+                        <th>Max Hashrate</th>
+                        <th>Uptime %</th>
+                        <th>Downtime (hours)</th>
+                        <th>Reject Rate</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-table-body">
+                    <!-- Will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Keep your existing JavaScript (API_URLS, currentCoin, HASHRATE_UNITS, etc.)
+    // API URLs for different coins
+    const API_URLS = {
+        btc: 'https://api.emcd.io/v1/btc/workers/4418bd07-5506-4901-bd7b-e38c6a507a8c',
+        kas: 'https://api.emcd.io/v1/kas/workers/4418bd07-5506-4901-bd7b-e38c6a507a8c'
+    };
+    
+    // Current selected coin
+    let currentCoin = 'btc';
+    
+    // Hashrate units by coin type
+    const HASHRATE_UNITS = {
+        btc: 'TH/s',  // Terahash for Bitcoin
+        kas: 'GH/s'   // Gigahash for Kaspa
+    };
+    
+    // Hashrate divisors by coin type
+    const HASHRATE_DIVISORS = {
+        btc: 1e12,  // 1 trillion for TH/s
+        kas: 1e9    // 1 billion for GH/s
+    };
+
+    // Rack -> number of docks you expect in that rack
+    const DOCKS_PER_RACK_CONFIG = {
+        'CH': 64, 
+        'B': 16, 
+        'C': 16,
+        'D': 21, 
+        'E': 21,
+        'F': 21,
+        'K_01': 16, 
+        'K_02': 16, 
+        'K_03': 16,
+        'C001': 20,
+        'C002': 16
+    };
+
+    // This maps the number above to the correct CSS grid class
+    const GRID_CLASSES = {
+        16: 'grid-16',
+        20: 'grid-16', // Use same grid as 16
+        21: 'grid-21',
+        64: 'grid-64'
+    };
+
+    // Add your existing functions (switchCoin, fetchMinerData, getRackName, etc.)
+    
+    // NEW CODE FOR HISTORY & STATS FUNCTIONALITY
+    
+    // Chart objects
+    let hashrateChart = null;
+    let uptimeChart = null;
+    let topPerformersChart = null;
+    
+    // Function to switch between tabs
+    function switchTab(tabId) {
+        // Hide all tab contents
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Deactivate all tabs
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Activate the selected tab
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        
+        // Load data for the selected tab
+        if (tabId === 'history') {
+            initializeHistoryTab();
+        } else if (tabId === 'stats') {
+            initializeStatsTab();
+        }
+    }
+    
+    // Function to initialize history tab
+    function initializeHistoryTab() {
+        // Set default date range (last 7 days)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 7);
+        
+        document.getElementById('start-date').value = formatDateForInput(startDate);
+        document.getElementById('end-date').value = formatDateForInput(endDate);
+        
+        // Populate miner dropdown
+        populateMinerDropdown();
+        
+        // Load initial chart data
+        loadHistoricalData();
+    }
+    
+    // Function to initialize stats tab
+    function initializeStatsTab() {
+        loadStatistics();
+    }
+    
+    // Helper function to format date for input elements
+    function formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Function to populate miner dropdown
+    function populateMinerDropdown() {
+        // This would typically fetch from your API/database
+        // For now, we'll use a placeholder implementation
+        
+        fetch(API_URLS[currentCoin])
+            .then(response => response.json())
+            .then(data => {
+                const miners = data.details || [];
+                const minerSelect = document.getElementById('history-miner');
+                
+                // Clear existing options except "All Miners"
+                while (minerSelect.options.length > 1) {
+                    minerSelect.remove(1);
+                }
+                
+                // Add each miner to the dropdown
+                const addedMiners = new Set();
+                miners.forEach(miner => {
+                    if (!addedMiners.has(miner.worker)) {
+                        const option = document.createElement('option');
+                        option.value = miner.worker;
+                        option.textContent = miner.worker;
+                        minerSelect.appendChild(option);
+                        addedMiners.add(miner.worker);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error populating miner dropdown:', error);
+            });
+    }
+    
+    // Function to set time range for historical data
+    function setTimeRange(range) {
+        // Update active button
+        const buttons = document.querySelectorAll('.time-range-selector button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.time-range-selector button[onclick="setTimeRange('${range}')"]`).classList.add('active');
+        
+        // Set date range based on selection
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (range) {
+            case 'day':
+                startDate.setDate(endDate.getDate() - 1);
+                break;
+            case 'week':
+                startDate.setDate(endDate.getDate() - 7);
+                break;
+            case 'month':
+                startDate.setDate(endDate.getDate() - 30);
+                break;
+            case 'custom':
+                // Do nothing, let user select custom range
+                return;
+        }
+        
+        document.getElementById('start-date').value = formatDateForInput(startDate);
+        document.getElementById('end-date').value = formatDateForInput(endDate);
+        
+        // Reload data with new date range
+        loadHistoricalData();
+    }
+    
+    // Function to load historical data based on filters
+    function loadHistoricalData() {
+        const coin = document.getElementById('history-coin').value;
+        const miner = document.getElementById('history-miner').value;
+        const rack = document.getElementById('history-rack').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        // In a real implementation, you would fetch data from your API/database
+        // For now, we'll generate sample data for visualization
+        
+        // Sample data generation
+        const hashrateData = generateSampleHashrateData(startDate, endDate);
+        const uptimeData = generateSampleUptimeData(startDate, endDate);
+        
+        // Update charts
+        updateHashrateChart(hashrateData);
+        updateUptimeChart(uptimeData);
+    }
+    
+    // Function to generate sample hashrate data
+    function generateSampleHashrateData(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        
+        const labels = [];
+        const hashrateValues = [];
+        const avgHashrateValues = [];
+        
+        for (let i = 0; i <= days; i++) {
+            const date = new Date(start);
+            date.setDate(date.getDate() + i);
+            labels.push(date.toLocaleDateString());
+            
+            // Generate random hashrate between 170-220 TH/s with some fluctuation
+            const baseValue = 180 + Math.random() * 40;
+            hashrateValues.push(baseValue);
+            
+            // Generate 24h avg slightly smoother
+            const avgValue = 180 + (Math.random() * 30);
+            avgHashrateValues.push(avgValue);
+        }
+        
+        return {
+            labels,
+            datasets: [
+                {
+                    label: 'Hashrate',
+                    data: hashrateValues,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    tension: 0.3,
+                    borderWidth: 2
+                },
+                {
+                    label: '24h Average',
+                    data: avgHashrateValues,
+                    borderColor: '#FF5722',
+                    backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                    tension: 0.3,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }
+            ]
+        };
+    }
+    
+    // Function to generate sample uptime data
+    function generateSampleUptimeData(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        
+        const labels = [];
+        const uptimeValues = [];
+        
+        for (let i = 0; i <= days; i++) {
+            const date = new Date(start);
+            date.setDate(date.getDate() + i);
+            labels.push(date.toLocaleDateString());
+            
+            // Generate random uptime percentage between 85-100%
+            const uptime = 85 + Math.random() * 15;
+            uptimeValues.push(uptime);
+        }
+        
+        return {
+            labels,
+            datasets: [
+                {
+                    label: 'Uptime %',
+                    data: uptimeValues,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.2,
+                    borderWidth: 2
+                }
+            ]
+        };
+    }
+    
+    // Function to update hashrate chart
+    function updateHashrateChart(data) {
+        const ctx = document.getElementById('hashrate-chart').getContext('2d');
+        
+        if (hashrateChart) {
+            hashrateChart.data = data;
+            hashrateChart.update();
+        } else {
+            hashrateChart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            },
+                            title: {
+                                display: true,
+                                text: `Hashrate (${HASHRATE_UNITS[currentCoin]})`
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Function to update uptime chart
+    function updateUptimeChart(data) {
+        const ctx = document.getElementById('uptime-chart').getContext('2d');
+        
+        if (uptimeChart) {
+            uptimeChart.data = data;
+            uptimeChart.update();
+        } else {
+            uptimeChart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            min: 80,
+                            max: 100,
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            },
+                            title: {
+                                display: true,
+                                text: 'Uptime Percentage (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Function to load statistics based on filters
+    function loadStatistics() {
+        const coin = document.getElementById('stats-coin').value;
+        const period = document.getElementById('stats-period').value;
+        const type = document.getElementById('stats-type').value;
+        
+        // In a real implementation, you would fetch data from your API/database
+        // For now, we'll generate sample data for visualization
+        
+        if (type === 'miners') {
+            // Update table headers for miners view
+            document.querySelector('#stats-table thead tr').innerHTML = `
+                <th>Miner</th>
+                <th>Avg Hashrate</th>
+                <th>Max Hashrate</th>
+                <th>Uptime %</th>
+                <th>Downtime (hours)</th>
+                <th>Reject Rate</th>
+            `;
+            
+            // Generate and display miner statistics
+            const minerStats = generateSampleMinerStats(10);
+            displayMinerStats(minerStats);
+            
+            // Update top performers chart
+            updateTopPerformersChart(minerStats, 'Miners');
+            
+        } else {
+            // Update table headers for racks view
+            document.querySelector('#stats-table thead tr').innerHTML = `
+                <th>Rack</th>
+                <th>Avg Hashrate</th>
+                <th>Worker Count</th>
+                <th>Active Workers</th>
+                <th>Efficiency %</th>
+            `;
+            
+            // Generate and display rack statistics
+            const rackStats = generateSampleRackStats();
+            displayRackStats(rackStats);
+            
+            // Update top performers chart
+            updateTopPerformersChart(rackStats, 'Racks');
+        }
+    }
+    
+    // Function to generate sample miner statistics
+    function generateSampleMinerStats(count) {
+        const miners = [];
+        
+        for (let i = 0; i < count; i++) {
+            let name;
+            if (i < 6) {
+                name = `CH_${6430 + i}`;
+            } else {
+                name = `C00${Math.ceil(Math.random() * 2)}_${String.fromCharCode(65 + Math.floor(Math.random() * 6))}_${String(Math.floor(Math.random() * 10)).padStart(3, '0')}`;
+            }
+            
+            miners.push({
+                name: name,
+                avgHashrate: 170 + Math.random() * 50,
+                maxHashrate: 200 + Math.random() * 50,
+                uptime: 85 + Math.random() * 15,
+                downtime: Math.floor(Math.random() * 24),
+                rejectRate: (Math.random() * 0.01).toFixed(4)
+            });
+        }
+        
+        // Sort by average hashrate (descending)
+        miners.sort((a, b) => b.avgHashrate - a.avgHashrate);
+        
+        return miners;
+    }
+    
+    // Function to generate sample rack statistics
+    function generateSampleRackStats() {
+        const racks = [
+            { name: 'CH', avgHashrate: 10500 + Math.random() * 1500, workerCount: 64, activeWorkers: 58 + Math.floor(Math.random() * 6) },
+            { name: 'B', avgHashrate: 1500 + Math.random() * 300, workerCount: 16, activeWorkers: 13 + Math.floor(Math.random() * 3) },
+            { name: 'C', avgHashrate: 1600 + Math.random() * 200, workerCount: 16, activeWorkers: 14 + Math.floor(Math.random() * 2) },
+            { name: 'D', avgHashrate: 1800 + Math.random() * 400, workerCount: 21, activeWorkers: 18 + Math.floor(Math.random() * 3) },
+            { name: 'E', avgHashrate: 1750 + Math.random() * 350, workerCount: 21, activeWorkers: 19 + Math.floor(Math.random() * 2) },
+            { name: 'F', avgHashrate: 2000 + Math.random() * 500, workerCount: 21, activeWorkers: 20 },
+            { name: 'C001', avgHashrate: 1900 + Math.random() * 300, workerCount: 20, activeWorkers: 0 },
+            { name: 'C002', avgHashrate: 1700 + Math.random() * 200, workerCount: 16, activeWorkers: 0 }
+        ];
+        
+        // Calculate efficiency
+        racks.forEach(rack => {
+            rack.efficiency = (rack.activeWorkers / rack.workerCount) * 100;
+        });
+        
+        // Sort by average hashrate (descending)
+        racks.sort((a, b) => b.avgHashrate - a.avgHashrate);
+        
+        return racks;
+    }
+    
+    // Function to display miner statistics
+    function displayMinerStats(minerStats) {
+        const tableBody = document.getElementById('stats-table-body');
+        tableBody.innerHTML = '';
+        
+        minerStats.forEach(miner => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${miner.name}</td>
+                <td>${miner.avgHashrate.toFixed(2)} ${HASHRATE_UNITS[currentCoin]}</td>
+                <td>${miner.maxHashrate.toFixed(2)} ${HASHRATE_UNITS[currentCoin]}</td>
+                <td>${miner.uptime.toFixed(1)}%</td>
+                <td>${miner.downtime}</td>
+                <td>${miner.rejectRate}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Function to display rack statistics
+    function displayRackStats(rackStats) {
+        const tableBody = document.getElementById('stats-table-body');
+        tableBody.innerHTML = '';
+        
+        rackStats.forEach(rack => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${rack.name}</td>
+                <td>${rack.avgHashrate.toFixed(2)} ${HASHRATE_UNITS[currentCoin]}</td>
+                <td>${rack.workerCount}</td>
+                <td>${rack.activeWorkers}</td>
+                <td>${rack.efficiency.toFixed(1)}%</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Function to update top performers chart
+    function updateTopPerformersChart(data, type) {
+        const ctx = document.getElementById('top-performers-chart').getContext('2d');
+        
+        // Take top 5 performers
+        const topData = data.slice(0, 5);
+        
+        // Extract labels and values
+        const labels = topData.map(item => item.name);
+        let values, dataLabel;
+        
+        if (type === 'Miners') {
+            values = topData.map(item => item.avgHashrate);
+            dataLabel = `Average Hashrate (${HASHRATE_UNITS[currentCoin]})`;
+        } else {
+            values = topData.map(item => item.efficiency);
+            dataLabel = 'Efficiency (%)';
+        }
+        
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                label: dataLabel,
+                data: values,
+                backgroundColor: ['#4CAF50', '#2196F3', '#9C27B0', '#FF9800', '#F44336'],
+                borderWidth: 1
+            }]
+        };
+        
+        if (topPerformersChart) {
+            topPerformersChart.data = chartData;
+            topPerformersChart.update();
+        } else {
+            topPerformersChart = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: getComputedStyle(document.documentElement).getPropertyValue('--chart-grid-color')
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: `Top 5 ${type} by ${type === 'Miners' ? 'Hashrate' : 'Efficiency'}`
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Toggle theme
+    function toggleTheme() {
+        const body = document.body;
+        const currentTheme = body.getAttribute('data-theme');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+
+        if (currentTheme === 'light') {
+            body.setAttribute('data-theme', 'dark');
+            themeIcon.src = 'https://img.icons8.com/ios-filled/50/ffffff/moon-symbol.png';
+            themeText.textContent = 'Dark Theme';
+        } else {
+            body.setAttribute('data-theme', 'light');
+            themeIcon.src = 'https://img.icons8.com/ios-filled/50/000000/sun.png';
+            themeText.textContent = 'Light Theme';
+        }
+        
+        // Update charts with new theme colors
+        if (hashrateChart) hashrateChart.update();
+        if (uptimeChart) uptimeChart.update();
+        if (topPerformersChart) topPerformersChart.update();
+    }
+
+    // Auto-fetch data on load
+    window.onload = function() {
+        fetchMinerData();
+        
+        // Set initial dates for history tab
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 7);
+        
+        document.getElementById('start-date').value = formatDateForInput(startDate);
+        document.getElementById('end-date').value = formatDateForInput(endDate);
+    };
+</script>
+</body>
+</html>
